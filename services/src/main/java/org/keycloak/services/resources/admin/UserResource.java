@@ -75,16 +75,7 @@ import org.keycloak.services.validation.Validation;
 import org.keycloak.storage.ReadOnlyException;
 import org.keycloak.utils.ProfileHelper;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -93,15 +84,7 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -741,13 +724,39 @@ public class UserResource {
     @Path("groups")
     @NoCache
     @Produces(MediaType.APPLICATION_JSON)
-    public List<GroupRepresentation> groupMembership() {
+    public List<GroupRepresentation> groupMembership(@QueryParam("search") String search,
+                                                     @QueryParam("first") Integer firstResult,
+                                                     @QueryParam("max") Integer maxResults) {
         auth.users().requireView(user);
-        List<GroupRepresentation> memberships = new LinkedList<>();
-        for (GroupModel group : user.getGroups()) {
-            memberships.add(ModelToRepresentation.toRepresentation(group, false));
+        List<GroupRepresentation> results;
+
+        if (Objects.nonNull(search) && Objects.nonNull(firstResult) && Objects.nonNull(maxResults)) {
+            results = ModelToRepresentation.searchForGroupByName(user, false, search.trim(), firstResult, maxResults);
+        } else if(Objects.nonNull(firstResult) && Objects.nonNull(maxResults)) {
+            results = ModelToRepresentation.toGroupHierarchy(user, false, firstResult, maxResults);
+        } else {
+            results = ModelToRepresentation.toGroupHierarchy(user, false);
         }
-        return memberships;
+
+        return results;
+    }
+
+    @GET
+    @NoCache
+    @Path("groups/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, Long> getGroupMembershipCount(@QueryParam("search") String search) {
+        auth.users().requireView(user);
+        Long results;
+
+        if (Objects.nonNull(search)) {
+            results = user.getGroupsCountByNameContaining(search);
+        } else {
+            results = user.getGroupsCount();
+        }
+        Map<String, Long> map = new HashMap<>();
+        map.put("count", results);
+        return map;
     }
 
     @DELETE

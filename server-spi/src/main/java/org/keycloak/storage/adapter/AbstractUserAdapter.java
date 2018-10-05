@@ -18,32 +18,24 @@ package org.keycloak.storage.adapter;
 
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.component.ComponentModel;
-import org.keycloak.models.ClientModel;
-import org.keycloak.models.GroupModel;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.RoleContainerModel;
-import org.keycloak.models.RoleModel;
-import org.keycloak.models.UserModel;
+import org.keycloak.models.*;
 import org.keycloak.models.utils.DefaultRoles;
 import org.keycloak.models.utils.RoleUtils;
 import org.keycloak.storage.ReadOnlyException;
 import org.keycloak.storage.StorageId;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * This abstract class provides implementations for everything but getUsername().  getId() returns a default value
  * of "f:" + providerId + ":" + getUsername().  isEnabled() returns true.  getRoleMappings() will return default roles.
  * getGroups() will return default groups.
- *
+ * <p>
  * All other read methods return null, an empty collection, or false depending
  * on the type.  All update methods throw a ReadOnlyException.
- *
+ * <p>
  * Provider implementors should override the methods for attributes, properties, and mappings they support.
  *
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -109,11 +101,43 @@ public abstract class AbstractUserAdapter implements UserModel {
     }
 
     @Override
-    public Set<GroupModel> getGroups() {
-        Set<GroupModel> set = new HashSet<>();
-        if (appendDefaultGroups()) set.addAll(realm.getDefaultGroups());
-        set.addAll(getGroupsInternal());
-        return set;
+    public List<GroupModel> getGroups() {
+        List<GroupModel> groupModels = new ArrayList<>();
+        if (appendDefaultGroups()) groupModels.addAll(realm.getDefaultGroups());
+        groupModels.addAll(getGroupsInternal());
+        groupModels.sort(Comparator.comparing(GroupModel::getName));
+        return groupModels;
+    }
+
+    @Override
+    public List<GroupModel> getGroups(Integer first, Integer max) {
+        return getGroups().stream()
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .skip(first - 1)
+                .limit(max)
+                .collect(toList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups(String search, Integer first, Integer max) {
+        return getGroups().stream()
+                .filter(groupModel -> groupModel.getName().toLowerCase().contains(search.toLowerCase()))
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .skip(first - 1)
+                .limit(max)
+                .collect(toList());
+    }
+
+    @Override
+    public Long getGroupsCount() {
+        return Long.valueOf(getGroups().size());
+    }
+
+    @Override
+    public Long getGroupsCountByNameContaining(String search) {
+        return getGroups().stream()
+                .filter(groupModel -> groupModel.getName().toLowerCase().contains(search.toLowerCase()))
+                .count();
     }
 
     @Override
@@ -130,7 +154,7 @@ public abstract class AbstractUserAdapter implements UserModel {
 
     @Override
     public boolean isMemberOf(GroupModel group) {
-        Set<GroupModel> roles = getGroups();
+        List<GroupModel> roles = getGroups();
         return RoleUtils.isMember(roles, group);
     }
 
@@ -169,7 +193,7 @@ public abstract class AbstractUserAdapter implements UserModel {
     public boolean hasRole(RoleModel role) {
         Set<RoleModel> roles = getRoleMappings();
         return RoleUtils.hasRole(roles, role)
-          || RoleUtils.hasRoleFromGroup(getGroups(), role, true);
+                || RoleUtils.hasRoleFromGroup(getGroups(), role, true);
     }
 
     @Override

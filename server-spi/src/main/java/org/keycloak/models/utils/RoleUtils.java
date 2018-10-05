@@ -20,10 +20,7 @@ package org.keycloak.models.utils;
 import org.keycloak.models.GroupModel;
 import org.keycloak.models.RoleModel;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -38,7 +35,7 @@ public class RoleUtils {
      * @param targetGroup
      * @return true if targetGroup is in groups (directly or indirectly via parent child relationship)
      */
-    public static boolean isMember(Set<GroupModel> groups, GroupModel targetGroup) {
+    public static boolean isMember(List<GroupModel> groups, GroupModel targetGroup) {
         if (groups.contains(targetGroup)) return true;
 
         for (GroupModel mapping : groups) {

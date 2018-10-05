@@ -20,14 +20,12 @@ package org.keycloak.testsuite.federation.ldap;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.TargetsContainer;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.FixMethodOrder;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runners.MethodSorters;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.component.ComponentModel;
+import org.keycloak.models.*;
+import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.representations.idm.ComponentRepresentation;
 import org.keycloak.representations.idm.SynchronizationResultRepresentation;
 import org.keycloak.storage.ldap.LDAPStorageProvider;
@@ -38,12 +36,6 @@ import org.keycloak.storage.ldap.mappers.membership.MembershipType;
 import org.keycloak.storage.ldap.mappers.membership.group.GroupLDAPStorageMapper;
 import org.keycloak.storage.ldap.mappers.membership.group.GroupLDAPStorageMapperFactory;
 import org.keycloak.storage.ldap.mappers.membership.group.GroupMapperConfig;
-import org.keycloak.models.GroupModel;
-import org.keycloak.models.LDAPConstants;
-import org.keycloak.models.ModelException;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.UserModel;
-import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.storage.user.SynchronizationResult;
 import org.keycloak.testsuite.runonserver.RunOnServerDeployment;
 import org.keycloak.testsuite.util.LDAPRule;
@@ -51,7 +43,6 @@ import org.keycloak.testsuite.util.LDAPTestUtils;
 
 import javax.ws.rs.BadRequestException;
 import java.util.List;
-import java.util.Set;
 
 import static org.keycloak.testsuite.arquillian.DeploymentTargetModifier.AUTH_SERVER_CURRENT;
 
@@ -307,7 +298,7 @@ public class LDAPGroupMapperSyncTest extends AbstractLDAPTest {
 
             // Load user from LDAP to Keycloak DB
             UserModel john = session.users().getUserByUsername("johnkeycloak", realm);
-            Set<GroupModel> johnGroups = john.getGroups();
+            List<GroupModel> johnGroups = john.getGroups();
 
             // Assert just those groups, which john was memberOf exists because they were lazily created
             GroupModel group1 = KeycloakModelUtils.findGroupByPath(realm, "/group1");

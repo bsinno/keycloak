@@ -18,30 +18,21 @@
 package org.keycloak.models.jpa;
 
 import org.keycloak.common.util.MultivaluedHashMap;
-import org.keycloak.models.ClientModel;
-import org.keycloak.models.GroupModel;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.RoleContainerModel;
-import org.keycloak.models.RoleModel;
-import org.keycloak.models.UserModel;
-import org.keycloak.models.jpa.entities.UserAttributeEntity;
-import org.keycloak.models.jpa.entities.UserEntity;
-import org.keycloak.models.jpa.entities.UserGroupMembershipEntity;
-import org.keycloak.models.jpa.entities.UserRequiredActionEntity;
-import org.keycloak.models.jpa.entities.UserRoleMappingEntity;
+import org.keycloak.models.*;
+import org.keycloak.models.jpa.entities.*;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.models.utils.RoleUtils;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import javax.persistence.criteria.*;
+import java.util.*;
+
+import static java.util.Collections.EMPTY_SET;
+import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -289,20 +280,81 @@ public class UserAdapter implements UserModel, JpaModel<UserEntity> {
         user.setEmailVerified(verified);
     }
 
-    @Override
-    public Set<GroupModel> getGroups() {
+    private TypedQuery<String> createGetGroupsQuery(String search, Integer first, Integer max) {
         // we query ids only as the group  might be cached and following the @ManyToOne will result in a load
         // even if we're getting just the id.
-        TypedQuery<String> query = em.createNamedQuery("userGroupIds", String.class);
-        query.setParameter("user", getEntity());
-        List<String> ids = query.getResultList();
-        Set<GroupModel> groups = new HashSet<>();
-        for (String groupId : ids) {
-            GroupModel group = realm.getGroupById(groupId);
-            if (group == null) continue;
-            groups.add(group);
+        CriteriaBuilder builder = em.getCriteriaBuilder();
+        CriteriaQuery<String> queryBuilder = builder.createQuery(String.class);
+        Root<UserGroupMembershipEntity> root = queryBuilder.from(UserGroupMembershipEntity.class);
+
+        List<Predicate> predicates = new ArrayList();
+        predicates.add(builder.equal(root.get("user"), getEntity()));
+        Join<UserGroupMembershipEntity, GroupEntity> join = root.join("group");
+        if (nonNull(search) && !search.isEmpty()) {
+            predicates.add(builder.like(join.get("name"), builder.literal("%" + search + "%")));
         }
-        return groups;
+
+        queryBuilder.select(root.get("groupId"));
+        queryBuilder.where(predicates.toArray(new Predicate[predicates.size()]));
+        queryBuilder.orderBy(builder.asc(join.get("name")));
+
+        TypedQuery<String> query = em.createQuery(queryBuilder);
+        if (nonNull(first) && nonNull(max)) {
+            query.setFirstResult(first).setMaxResults(max);
+        }
+        return query;
+    }
+
+    private TypedQuery<Long> createCountGroupsQuery(String search) {
+        // we query ids only as the group  might be cached and following the @ManyToOne will result in a load
+        // even if we're getting just the id.
+        CriteriaBuilder builder = em.getCriteriaBuilder();
+        CriteriaQuery<Long> queryBuilder = builder.createQuery(Long.class);
+        Root<UserGroupMembershipEntity> root = queryBuilder.from(UserGroupMembershipEntity.class);
+
+        List<Predicate> predicates = new ArrayList();
+        predicates.add(builder.equal(root.get("user"), getEntity()));
+        if (nonNull(search) && !search.isEmpty()) {
+            Join<UserGroupMembershipEntity, GroupEntity> join = root.join("group");
+            predicates.add(builder.like(join.get("name"), builder.literal("%" + search + "%")));
+        }
+
+        queryBuilder.select(builder.count(root));
+        queryBuilder.where(predicates.toArray(new Predicate[predicates.size()]));
+        TypedQuery<Long> query = em.createQuery(queryBuilder);
+        return query;
+    }
+
+    private List<GroupModel> getGroupModels(List<String> groupIds) {
+        return groupIds.stream()
+                .map(id -> realm.getGroupById(id))
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .collect(toList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups() {
+        return getGroupModels(createGetGroupsQuery(null, null, null).getResultList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups(Integer first, Integer max) {
+        return getGroupModels(createGetGroupsQuery(null, first, max).getResultList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups(String search, Integer first, Integer max) {
+        return getGroupModels(createGetGroupsQuery(search, first, max).getResultList());
+    }
+
+    @Override
+    public Long getGroupsCount() {
+        return createCountGroupsQuery(null).getSingleResult();
+    }
+
+    @Override
+    public Long getGroupsCountByNameContaining(String search) {
+        return createCountGroupsQuery(search).getSingleResult();
     }
 
     @Override
@@ -338,7 +390,7 @@ public class UserAdapter implements UserModel, JpaModel<UserEntity> {
 
     @Override
     public boolean isMemberOf(GroupModel group) {
-        Set<GroupModel> roles = getGroups();
+        List<GroupModel> roles = getGroups();
         return RoleUtils.isMember(roles, group);
     }
 
@@ -354,7 +406,7 @@ public class UserAdapter implements UserModel, JpaModel<UserEntity> {
     public boolean hasRole(RoleModel role) {
         Set<RoleModel> roles = getRoleMappings();
         return RoleUtils.hasRole(roles, role)
-          || RoleUtils.hasRoleFromGroup(getGroups(), role, true);
+                || RoleUtils.hasRoleFromGroup(getGroups(), role, true);
     }
 
     protected TypedQuery<UserRoleMappingEntity> getUserRoleMappingEntityTypedQuery(RoleModel role) {
@@ -431,9 +483,9 @@ public class UserAdapter implements UserModel, JpaModel<UserEntity> {
         for (RoleModel role : roleMappings) {
             RoleContainerModel container = role.getContainer();
             if (container instanceof ClientModel) {
-                ClientModel appModel = (ClientModel)container;
+                ClientModel appModel = (ClientModel) container;
                 if (appModel.getId().equals(app.getId())) {
-                   roles.add(role);
+                    roles.add(role);
                 }
             }
         }
@@ -474,7 +526,6 @@ public class UserAdapter implements UserModel, JpaModel<UserEntity> {
     public int hashCode() {
         return getId().hashCode();
     }
-
 
 
 }

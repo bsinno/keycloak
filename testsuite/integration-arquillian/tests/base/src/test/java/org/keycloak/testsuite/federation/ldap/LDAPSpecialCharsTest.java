@@ -17,9 +17,6 @@
 
 package org.keycloak.testsuite.federation.ldap;
 
-import java.util.List;
-import java.util.Set;
-
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.TargetsContainer;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
@@ -46,6 +43,8 @@ import org.keycloak.testsuite.runonserver.RunOnServerDeployment;
 import org.keycloak.testsuite.util.LDAPRule;
 import org.keycloak.testsuite.util.LDAPTestConfiguration;
 import org.keycloak.testsuite.util.LDAPTestUtils;
+
+import java.util.List;
 
 import static org.keycloak.testsuite.arquillian.DeploymentTargetModifier.AUTH_SERVER_CURRENT;
 import static org.keycloak.testsuite.util.LDAPTestUtils.getGroupDescriptionLDAPAttrName;
@@ -172,7 +171,7 @@ public class LDAPSpecialCharsTest extends AbstractLDAPTest {
 
             // 2 - Check that group mappings are in LDAP and hence available through federation
 
-            Set<GroupModel> userGroups = specialUser.getGroups();
+            List<GroupModel> userGroups = specialUser.getGroups();
             Assert.assertEquals(1, userGroups.size());
             Assert.assertTrue(userGroups.contains(specialGroup));
 

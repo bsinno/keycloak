@@ -17,25 +17,17 @@
 
 package org.keycloak.models.cache.infinispan;
 
-import org.keycloak.models.ClientModel;
-import org.keycloak.models.GroupModel;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.RoleContainerModel;
-import org.keycloak.models.RoleModel;
-import org.keycloak.models.UserModel;
+import org.keycloak.models.*;
 import org.keycloak.models.cache.CachedUserModel;
 import org.keycloak.models.cache.infinispan.entities.CachedUser;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.models.utils.RoleUtils;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -256,7 +248,7 @@ public class UserAdapter implements CachedUserModel {
     public void setFederationLink(String link) {
         getDelegateForUpdate();
         updated.setFederationLink(link);
-   }
+    }
 
     @Override
     public String getServiceAccountClientLink() {
@@ -308,8 +300,8 @@ public class UserAdapter implements CachedUserModel {
         if (cached.getRoleMappings(modelSupplier).contains(role.getId())) return true;
 
         Set<RoleModel> mappings = getRoleMappings();
-        for (RoleModel mapping: mappings) {
-           if (mapping.hasRole(role)) return true;
+        for (RoleModel mapping : mappings) {
+            if (mapping.hasRole(role)) return true;
         }
         return RoleUtils.hasRoleFromGroup(getGroups(), role, true);
     }
@@ -344,9 +336,9 @@ public class UserAdapter implements CachedUserModel {
     }
 
     @Override
-    public Set<GroupModel> getGroups() {
+    public List<GroupModel> getGroups() {
         if (updated != null) return updated.getGroups();
-        Set<GroupModel> groups = new HashSet<GroupModel>();
+        List<GroupModel> groups = new ArrayList<>();
         for (String id : cached.getGroups(modelSupplier)) {
             GroupModel groupModel = keycloakSession.realms().getGroupById(id, realm);
             if (groupModel == null) {
@@ -357,7 +349,39 @@ public class UserAdapter implements CachedUserModel {
             groups.add(groupModel);
 
         }
+        groups.sort(Comparator.comparing(GroupModel::getName));
         return groups;
+    }
+
+    @Override
+    public List<GroupModel> getGroups(Integer first, Integer max) {
+        return getGroups().stream()
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .skip(first)
+                .limit(max)
+                .collect(toList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups(String search, Integer first, Integer max) {
+        return getGroups().stream()
+                .filter(groupModel -> groupModel.getName().toLowerCase().contains(search.toLowerCase()))
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .skip(first)
+                .limit(max)
+                .collect(toList());
+    }
+
+    @Override
+    public Long getGroupsCount() {
+        return Long.valueOf(getGroups().size());
+    }
+
+    @Override
+    public Long getGroupsCountByNameContaining(String search) {
+        return getGroups().stream()
+                .filter(groupModel -> groupModel.getName().toLowerCase().contains(search.toLowerCase()))
+                .count();
     }
 
     @Override
@@ -377,7 +401,7 @@ public class UserAdapter implements CachedUserModel {
     public boolean isMemberOf(GroupModel group) {
         if (updated != null) return updated.isMemberOf(group);
         if (cached.getGroups(modelSupplier).contains(group.getId())) return true;
-        Set<GroupModel> roles = getGroups();
+        List<GroupModel> roles = getGroups();
         return RoleUtils.isMember(roles, group);
     }
 

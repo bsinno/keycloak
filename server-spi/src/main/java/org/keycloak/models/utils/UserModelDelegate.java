@@ -224,8 +224,28 @@ public class UserModelDelegate implements UserModel {
     }
 
     @Override
-    public Set<GroupModel> getGroups() {
+    public List<GroupModel> getGroups() {
         return delegate.getGroups();
+    }
+
+    @Override
+    public List<GroupModel> getGroups(Integer first, Integer max) {
+        return delegate.getGroups(first, max);
+    }
+
+    @Override
+    public List<GroupModel> getGroups(String search, Integer first, Integer max) {
+        return delegate.getGroups(search, first, max);
+    }
+
+    @Override
+    public Long getGroupsCount() {
+        return delegate.getGroupsCount();
+    }
+
+    @Override
+    public Long getGroupsCountByNameContaining(String search) {
+        return delegate.getGroupsCountByNameContaining(search);
     }
 
     @Override

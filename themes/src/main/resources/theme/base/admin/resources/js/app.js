@@ -657,9 +657,6 @@ module.config([ '$routeProvider', function($routeProvider) {
                 },
                 user : function(UserLoader) {
                     return UserLoader();
-                },
-                groups : function(GroupListLoader) {
-                    return GroupListLoader();
                 }
             },
             controller : 'UserGroupMembershipCtrl'
@@ -892,9 +889,6 @@ module.config([ '$routeProvider', function($routeProvider) {
             resolve : {
                 realm : function(RealmLoader) {
                     return RealmLoader();
-                },
-                groups : function(GroupListLoader) {
-                    return GroupListLoader();
                 }
             },
             controller : 'DefaultGroupsCtrl'
@@ -1419,19 +1413,7 @@ module.config([ '$routeProvider', function($routeProvider) {
             },
             controller : 'ClientDetailCtrl'
         })
-        .when('/create/client-scope/step-1/:realm', {
-            templateUrl : resourceUrl + '/partials/client-scope-create-step-1.html',
-            resolve : {
-                realm : function(RealmLoader) {
-                    return RealmLoader();
-                },
-                clients : function(ClientListLoader) {
-                    return ClientListLoader();
-                }
-            },
-            controller : 'ClientScopeCreateStep1Ctrl'
-        })
-        .when('/create/client-scope/step-2/:realm', {
+        .when('/create/client-scope/:realm', {
             templateUrl : resourceUrl + '/partials/client-scope-detail.html',
             resolve : {
                 realm : function(RealmLoader) {

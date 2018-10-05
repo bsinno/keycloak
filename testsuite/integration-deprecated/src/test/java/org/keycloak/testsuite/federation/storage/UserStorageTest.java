@@ -389,7 +389,7 @@ public class UserStorageTest {
         role = realm.getRole("foo-role");
         Assert.assertTrue(thor.hasRole(role));
 
-        Set<GroupModel> groups = thor.getGroups();
+        List<GroupModel> groups = thor.getGroups();
         boolean foundGroup = false;
         for (GroupModel g : groups) {
             if (g.getName().equals("my-group")) foundGroup = true;

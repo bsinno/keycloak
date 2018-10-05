@@ -18,23 +18,15 @@ package org.keycloak.storage.adapter;
 
 import org.keycloak.common.util.MultivaluedHashMap;
 import org.keycloak.common.util.Time;
-import org.keycloak.models.ClientModel;
-import org.keycloak.models.GroupModel;
-import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.models.RoleModel;
-import org.keycloak.models.UserModel;
+import org.keycloak.models.*;
 import org.keycloak.models.utils.DefaultRoles;
 import org.keycloak.models.utils.RoleUtils;
 import org.keycloak.storage.ReadOnlyException;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
+import static java.util.Collections.EMPTY_SET;
+import static java.util.stream.Collectors.toList;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -251,13 +243,45 @@ public class InMemoryUserAdapter implements UserModel {
     }
 
     @Override
-    public Set<GroupModel> getGroups() {
-        if (groupIds.size() == 0) return Collections.EMPTY_SET;
-        Set<GroupModel> groups = new HashSet<>();
-        for (String id : groupIds) {
-            groups.add(realm.getGroupById(id));
-        }
-        return groups;
+    public List<GroupModel> getGroups() {
+        return groupIds.stream()
+                .map(id -> realm.getGroupById(id))
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .collect(toList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups(Integer first, Integer max) {
+        return groupIds.stream()
+                .map(id -> realm.getGroupById(id))
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .skip(first - 1)
+                .limit(max)
+                .collect(toList());
+    }
+
+    @Override
+    public List<GroupModel> getGroups(String search, Integer first, Integer max) {
+        return groupIds.stream()
+                .map(id -> realm.getGroupById(id))
+                .filter(groupModel -> groupModel.getName().toLowerCase().contains(search.toLowerCase()))
+                .sorted(Comparator.comparing(GroupModel::getName))
+                .skip(first - 1)
+                .limit(max)
+                .collect(toList());
+    }
+
+    @Override
+    public Long getGroupsCount() {
+        return Long.valueOf(groupIds.size());
+    }
+
+    @Override
+    public Long getGroupsCountByNameContaining(String search) {
+        return groupIds.stream()
+                .map(id -> realm.getGroupById(id))
+                .filter(groupModel -> groupModel.getName().toLowerCase().contains(search.toLowerCase()))
+                .count();
     }
 
     @Override
@@ -278,7 +302,7 @@ public class InMemoryUserAdapter implements UserModel {
     public boolean isMemberOf(GroupModel group) {
         if (groupIds == null) return false;
         if (groupIds.contains(group.getId())) return true;
-        Set<GroupModel> groups = getGroups();
+        List<GroupModel> groups = getGroups();
         return RoleUtils.isMember(groups, group);
     }
 
@@ -348,7 +372,7 @@ public class InMemoryUserAdapter implements UserModel {
 
     @Override
     public Set<RoleModel> getRoleMappings() {
-        if (roleIds.size() == 0) return Collections.EMPTY_SET;
+        if (roleIds.size() == 0) return EMPTY_SET;
         Set<RoleModel> roles = new HashSet<>();
         for (String id : roleIds) {
             roles.add(realm.getRoleById(id));

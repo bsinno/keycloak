@@ -111,7 +111,12 @@ public interface UserModel extends RoleMapperModel {
 
     void setEmailVerified(boolean verified);
 
-    Set<GroupModel> getGroups();
+    List<GroupModel> getGroups();
+    List<GroupModel> getGroups(Integer first, Integer max);
+    List<GroupModel> getGroups(String search, Integer first, Integer max);
+    Long getGroupsCount();
+    Long getGroupsCountByNameContaining(String search);
+
     void joinGroup(GroupModel group);
     void leaveGroup(GroupModel group);
     boolean isMemberOf(GroupModel group);

@@ -19,15 +19,18 @@ package org.keycloak.storage.ldap.mappers;
 
 import org.jboss.logging.Logger;
 import org.keycloak.component.ComponentModel;
-import org.keycloak.models.*;
+import org.keycloak.models.GroupModel;
+import org.keycloak.models.ModelException;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.UserModel;
 import org.keycloak.models.utils.KeycloakModelUtils;
 import org.keycloak.models.utils.UserModelDelegate;
 import org.keycloak.storage.ldap.LDAPStorageProvider;
 import org.keycloak.storage.ldap.idm.model.LDAPObject;
 import org.keycloak.storage.ldap.idm.query.internal.LDAPQuery;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author <a href="mailto:jean-loup.maillet@yesitis.fr">Jean-Loup Maillet</a>
@@ -51,8 +54,8 @@ public class HardcodedLDAPGroupStorageMapper extends AbstractLDAPStorageMapper {
         return new UserModelDelegate(delegate) {
 
             @Override
-            public Set<GroupModel> getGroups() {
-                Set<GroupModel> groups = new HashSet<GroupModel>(super.getGroups());
+            public List<GroupModel> getGroups() {
+                List<GroupModel> groups = new ArrayList<>(super.getGroups());
 
                 GroupModel group = getGroup(realm);
                 if (group != null) {

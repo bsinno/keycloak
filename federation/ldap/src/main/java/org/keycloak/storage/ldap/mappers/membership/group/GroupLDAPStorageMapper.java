@@ -43,14 +43,7 @@ import org.keycloak.storage.ldap.mappers.membership.MembershipType;
 import org.keycloak.storage.ldap.mappers.membership.UserRolesRetrieveStrategy;
 import org.keycloak.storage.user.SynchronizationResult;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author <a href="mailto:mposolda@redhat.com">Marek Posolda</a>
@@ -637,14 +630,14 @@ public class GroupLDAPStorageMapper extends AbstractLDAPStorageMapper implements
         }
 
         @Override
-        public Set<GroupModel> getGroups() {
-            Set<GroupModel> ldapGroupMappings = getLDAPGroupMappingsConverted();
+        public List<GroupModel> getGroups() {
+            List<GroupModel> ldapGroupMappings = getLDAPGroupMappingsConverted();
             if (config.getMode() == LDAPGroupMapperMode.LDAP_ONLY) {
                 // Use just group mappings from LDAP
                 return ldapGroupMappings;
             } else {
                 // Merge mappings from both DB and LDAP
-                Set<GroupModel> modelGroupMappings = super.getGroups();
+                List<GroupModel> modelGroupMappings = super.getGroups();
                 ldapGroupMappings.addAll(modelGroupMappings);
                 return ldapGroupMappings;
             }
@@ -693,18 +686,18 @@ public class GroupLDAPStorageMapper extends AbstractLDAPStorageMapper implements
 
         @Override
         public boolean isMemberOf(GroupModel group) {
-            Set<GroupModel> ldapGroupMappings = getGroups();
+            List<GroupModel> ldapGroupMappings = getGroups();
             return ldapGroupMappings.contains(group);
         }
 
-        protected Set<GroupModel> getLDAPGroupMappingsConverted() {
+        protected List<GroupModel> getLDAPGroupMappingsConverted() {
             if (cachedLDAPGroupMappings != null) {
-                return new HashSet<>(cachedLDAPGroupMappings);
+                return new ArrayList<>(cachedLDAPGroupMappings);
             }
 
             List<LDAPObject> ldapGroups = getLDAPGroupMappings(ldapUser);
 
-            Set<GroupModel> result = new HashSet<>();
+            List<GroupModel> result = new ArrayList<>();
             for (LDAPObject ldapGroup : ldapGroups) {
                 GroupModel kcGroup = findKcGroupOrSyncFromLDAP(realm, ldapGroup, this);
                 if (kcGroup != null) {
