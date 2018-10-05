@@ -113,7 +113,7 @@ public class LogoutEndpoint {
         UserSessionModel userSession = null;
         if (encodedIdToken != null) {
             try {
-                IDToken idToken = tokenManager.verifyIDTokenSignature(session, realm, encodedIdToken);
+                IDToken idToken = tokenManager.verifyIDTokenSignature(session, encodedIdToken);
                 userSession = session.sessions().getUserSession(realm, idToken.getSessionState());
             } catch (OAuthErrorException e) {
                 event.event(EventType.LOGOUT);
@@ -218,7 +218,7 @@ public class LogoutEndpoint {
         ClientModel client = AuthorizeClientUtil.authorizeClient(session, event).getClient();
 
         if (client.isBearerOnly()) {
-            throw new ErrorResponseException("invalid_client", "Bearer-only not allowed", Response.Status.BAD_REQUEST);
+            throw new ErrorResponseException(Errors.INVALID_CLIENT, "Bearer-only not allowed", Response.Status.BAD_REQUEST);
         }
 
         return client;

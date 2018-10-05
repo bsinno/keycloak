@@ -1210,6 +1210,13 @@ module.factory('Client', function($resource) {
     });
 });
 
+module.factory('ClientScopeGenerateAudienceClientScope', function($resource) {
+    return $resource(authUrl + '/admin/realms/:realm/client-scopes/generate-audience-client-scope?clientId=:clientId', {
+        realm : '@realm',
+        clientId : "@clientId"
+    });
+});
+
 module.factory('ClientScope', function($resource) {
     return $resource(authUrl + '/admin/realms/:realm/client-scopes/:clientScope', {
         realm : '@realm',
@@ -1397,23 +1404,29 @@ module.factory('TimeUnit2', function() {
     var t = {};
 
     t.asUnit = function(time) {
-        var unit = 'Minutes';
-        if (time) {
-            if (time < 60) {
-                time = 60;
-            }
 
-            if (time % 60 == 0) {
-                unit = 'Minutes';
-                time = time / 60;
-            }
-            if (time % 60 == 0) {
-                unit = 'Hours';
-                time = time / 60;
-            }
-            if (time % 24 == 0) {
-                unit = 'Days'
-                time = time / 24;
+        var unit = 'Minutes';
+
+        if (time) {
+            if (time == -1) {
+                time = -1;
+            } else {
+                if (time < 60) {
+                    time = 60;
+                }
+
+                if (time % 60 == 0) {
+                    unit = 'Minutes';
+                    time = time / 60;
+                }
+                if (time % 60 == 0) {
+                    unit = 'Hours';
+                    time = time / 60;
+                }
+                if (time % 24 == 0) {
+                    unit = 'Days'
+                    time = time / 24;
+                }
             }
         }
 

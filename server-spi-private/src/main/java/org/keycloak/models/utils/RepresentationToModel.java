@@ -47,6 +47,7 @@ import org.keycloak.authorization.store.ResourceServerStore;
 import org.keycloak.authorization.store.ResourceStore;
 import org.keycloak.authorization.store.ScopeStore;
 import org.keycloak.authorization.store.StoreFactory;
+import org.keycloak.common.Profile;
 import org.keycloak.common.enums.SslRequired;
 import org.keycloak.common.util.Base64;
 import org.keycloak.common.util.MultivaluedHashMap;
@@ -173,6 +174,8 @@ public class RepresentationToModel {
             newRealm.setAdminEventsDetailsEnabled(rep.isAdminEventsDetailsEnabled());
 
         if (rep.getNotBefore() != null) newRealm.setNotBefore(rep.getNotBefore());
+
+        if (rep.getDefaultSignatureAlgorithm() != null) newRealm.setDefaultSignatureAlgorithm(rep.getDefaultSignatureAlgorithm());
 
         if (rep.getRevokeRefreshToken() != null) newRealm.setRevokeRefreshToken(rep.getRevokeRefreshToken());
         else newRealm.setRevokeRefreshToken(false);
@@ -905,6 +908,7 @@ public class RepresentationToModel {
         if (rep.getActionTokenGeneratedByUserLifespan() != null)
             realm.setActionTokenGeneratedByUserLifespan(rep.getActionTokenGeneratedByUserLifespan());
         if (rep.getNotBefore() != null) realm.setNotBefore(rep.getNotBefore());
+        if (rep.getDefaultSignatureAlgorithm() != null) realm.setDefaultSignatureAlgorithm(rep.getDefaultSignatureAlgorithm());
         if (rep.getRevokeRefreshToken() != null) realm.setRevokeRefreshToken(rep.getRevokeRefreshToken());
         if (rep.getRefreshTokenMaxReuse() != null) realm.setRefreshTokenMaxReuse(rep.getRefreshTokenMaxReuse());
         if (rep.getAccessTokenLifespan() != null) realm.setAccessTokenLifespan(rep.getAccessTokenLifespan());
@@ -1245,6 +1249,7 @@ public class RepresentationToModel {
         }
 
         client.updateClient();
+        resourceRep.setId(client.getId());
 
         return client;
     }
@@ -1987,7 +1992,7 @@ public class RepresentationToModel {
         }
     }
 
-    public static void toModel(ResourceServerRepresentation rep, AuthorizationProvider authorization) {
+    public static ResourceServer toModel(ResourceServerRepresentation rep, AuthorizationProvider authorization) {
         ResourceServerStore resourceServerStore = authorization.getStoreFactory().getResourceServerStore();
         ResourceServer resourceServer;
         ResourceServer existing = resourceServerStore.findById(rep.getClientId());
@@ -2029,6 +2034,8 @@ public class RepresentationToModel {
         }
 
         importPolicies(authorization, resourceServer, rep.getPolicies(), null);
+
+        return resourceServer;
     }
 
     private static Policy importPolicies(AuthorizationProvider authorization, ResourceServer resourceServer, List<PolicyRepresentation> policiesToImport, String parentPolicyName) {
@@ -2557,4 +2564,31 @@ public class RepresentationToModel {
         return m;
     }
 
+    public static ResourceServer createResourceServer(ClientModel client, KeycloakSession session, boolean addDefaultRoles) {
+        AuthorizationProvider authorization = session.getProvider(AuthorizationProvider.class);
+        UserModel serviceAccount = session.users().getServiceAccount(client);
+
+        if (serviceAccount == null) {
+            client.setServiceAccountsEnabled(true);
+        }
+
+        if (addDefaultRoles) {
+            RoleModel umaProtectionRole = client.getRole(Constants.AUTHZ_UMA_PROTECTION);
+
+            if (umaProtectionRole == null) {
+                umaProtectionRole = client.addRole(Constants.AUTHZ_UMA_PROTECTION);
+            }
+
+            if (serviceAccount != null) {
+                serviceAccount.grantRole(umaProtectionRole);
+            }
+        }
+
+        ResourceServerRepresentation representation = new ResourceServerRepresentation();
+
+        representation.setAllowRemoteResourceManagement(true);
+        representation.setClientId(client.getId());
+
+        return toModel(representation, authorization);
+    }
 }

@@ -33,7 +33,13 @@ import java.util.Set;
 public class Profile {
 
     public enum Feature {
-        AUTHORIZATION, IMPERSONATION, SCRIPTS, DOCKER, ACCOUNT2, TOKEN_EXCHANGE
+        ACCOUNT2,
+        ADMIN_FINE_GRAINED_AUTHZ,
+        DOCKER,
+        IMPERSONATION,
+        OPENSHIFT_INTEGRATION,
+        SCRIPTS,
+        TOKEN_EXCHANGE
     }
 
     private enum ProductValue {
@@ -48,7 +54,7 @@ public class Profile {
     }
 
     private enum ProfileValue {
-        PRODUCT(Feature.AUTHORIZATION, Feature.SCRIPTS, Feature.DOCKER, Feature.ACCOUNT2, Feature.TOKEN_EXCHANGE),
+        PRODUCT(Feature.ADMIN_FINE_GRAINED_AUTHZ, Feature.SCRIPTS, Feature.DOCKER, Feature.ACCOUNT2, Feature.TOKEN_EXCHANGE),
         PREVIEW(Feature.ACCOUNT2),
         COMMUNITY(Feature.DOCKER, Feature.ACCOUNT2);
 
